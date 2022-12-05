@@ -12,8 +12,9 @@
 }
 ```
 
-```json
 ### Plugin Settings
+
+```json
 
 {
   "token": "..."
