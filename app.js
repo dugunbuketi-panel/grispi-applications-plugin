@@ -2,7 +2,7 @@ function tryCors() {
   fetch('https://hesabimapi.dugunbuketi.com/api/v1/applications?phone=0530', {
     method: 'GET',
     headers: {
-      'mode': 'cors'
+      'mode': 'cors',
       'Authorization': window.dugunBuketiAuth
     }
   })
