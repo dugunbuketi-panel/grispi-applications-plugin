@@ -8,7 +8,7 @@
     "height": 200,
     "width": 200
   },
-  "src": "..."
+  "src": "https://dugunbuketi-panel.github.io/grispi-applications-plugin/"
 }
 ```
 
