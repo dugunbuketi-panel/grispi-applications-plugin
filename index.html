@@ -25,5 +25,15 @@
   </main>
   <script id="grispiPluginJs" type="text/javascript" src="https://grispiapp.github.io/grispi-plugin-sdk/grispi-plugin.js"></script>
   <script type="application/javascript" src="app.js"></script>
+  <script type="text/javascript">
+    window.addEventListener(DUGUNBUKETI_APPLICATIONS_READY, e => {
+      const eventData = e.detail;
+      if (eventData.success) {
+        content.innerText = JSON.stringify(eventData.data);
+      } else {
+        content.innerText = eventData.message;
+      }
+    });
+  </script>
 </body>
 </html>

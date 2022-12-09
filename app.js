@@ -1,79 +1,58 @@
-function tryCors() {
-  fetch('https://hesabimapi.dugunbuketi.com/api/v1/applications?phone=0530', {
-    method: 'GET',
-    headers: {
-      'mode': 'cors',
-      'Authorization': window.dugunBuketiAuth
-    }
-  })
-  .then(res => {
-    console.log(res);
-    return res.json();
-  })
-  .then(data => {
-    console.log(data);
-  });
-}
+const DUGUNBUKETI_APPLICATIONS_READY = 'dugunbuketi.applications.ready';
 
 {
   const client = GrispiClient.instance();
-  let currentTicketKey = null;
-
-  updateUI('initial render');
 
   function initCallback(pluginSettings) {
 
-    updateUI(`init callback`, pluginSettings);
+    console.debug(`init callback`, pluginSettings);
 
-    // When the plugin is started, we need to call 'currentTicket()' for once in order to learn the current ticket.
-    //Then we can track the current ticket via activeTicketChangedCallback function.
-    client.currentTicket().then(newCurrentTicketKey => {
-      console.log(`Current ticket is set as`, newCurrentTicketKey);
-      currentTicketKey = newCurrentTicketKey;
-      updateUI(`currentTicket response`, newCurrentTicketKey);
-    });
+    const phoneNumber = pluginSettings.context.requester?.phone;
 
-    client.api.get(`tickets/${pluginSettings.context.ticketKey}`)
-      .then(res => {
-        return res.json()
-      })
-      .then(data => {
-        updateUI('Ticket from rest', data.key)
-      })
-  }
-
-  // Do something when current ticket is changed
-  GrispiClient.prototype.activeTicketChanged = function activeTicketChangedCallback(newCurrentTicketKey) {
-    console.log(`Previous ticket was`, currentTicketKey, `and current ticket is`, newCurrentTicketKey);
-    updateUI('activeTicketChanged', `Previous ticket was`, currentTicketKey, `and current ticket is`, newCurrentTicketKey);
-    currentTicketKey = newCurrentTicketKey;
-  }
-
-  function updateUI() {
-    const id = Date.now().toString();
-    content.innerHTML += `<section id="${id}"><code>${new Date().toLocaleTimeString()}</code></section>`;
-    const container = document.getElementById(id);
-    for (let arg of arguments) {
-      if (typeof arg === 'string') {
-        container.insertAdjacentHTML('beforeend', `<div class="message">${arg}</div>`);
-      } else {
-        const id2 = Date.now().toString();
-        const buttonId = `${id2}Button`;
-        container.insertAdjacentHTML('beforeend', `<button type="button" id="${buttonId}">Toggle</button>`);
-        container.insertAdjacentHTML('beforeend', `<pre class="message" id="${id2}">${toJson(arg)}</pre>`);
-
-        document.getElementById(buttonId).addEventListener('click', function () {
-          alert(13)
-        });
-      }
+    if (phoneNumber) {
+      const dugunBuketiToken = pluginSettings.settings.token;
+      getUsersApplications(phoneNumber, dugunBuketiToken);
+    } else {
+      window.dispatchEvent(new CustomEvent(DUGUNBUKETI_APPLICATIONS_READY, {detail: eventData(false, 'Kullanıcının telefonu yok', null)}));
     }
-    content.innerHTML += `<hr>`;
+    
   }
 
-  function toJson(obj) {
-    return JSON.stringify(obj, null, 2);
+  GrispiClient.prototype.activeTicketChanged = function activeTicketChangedCallback(newCurrentTicketKey) {
+    // We don't care about the active ticket, we only care about the ticket on which this plugin is rendered.
+    // So we safely ignore this callback.
   }
+
 
   client.init().then(initCallback);
   client.validateImplementation();
+
+  function eventData(success, message, data) {
+    return {success, message, data};
+  }
+
+  /**
+   * phoneNumber: string => phone number in E164 format (i.e. +905051112233)
+   */
+  function getUsersApplications(phoneNumber, token) {
+    const adaptedParam = phoneNumber.replace('+90', '');
+    fetch(`https://hesabimapi.dugunbuketi.com/api/v1/applications?phone=${adaptedParam}`, {
+      method: 'GET',
+      headers: {
+        'mode': 'cors',
+        'Authorization': token ?? window.dugunBuketiAuth
+      }
+    })
+    .then(res => {
+      if (res.ok) {
+        return res.json();
+      }
+      window.dispatchEvent(new CustomEvent(DUGUNBUKETI_APPLICATIONS_READY, {detail: eventData(false, `API isteğinde hata oluştu: ${res.status} ${res.statusText}`, null)}));
+      throw new Error(`Request failed with status '${res.status}':'${res.statusText}'`); 
+    })
+    .then(data => {
+      console.log(data);
+      window.dispatchEvent(new CustomEvent(DUGUNBUKETI_APPLICATIONS_READY, {detail: eventData(true, null, data)}));
+    });
+  }
 }
